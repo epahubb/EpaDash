@@ -1,0 +1,32 @@
+erDiagram
+    USER ||--o{ USER_ROLE : has
+    USER ||--o| CUSTOMER_PROFILE : owns
+    USER ||--o| MERCHANT : owns
+    USER ||--o| RIDER_PROFILE : owns
+    USER ||--o{ ADDRESS : saves
+    USER ||--o{ REFRESH_TOKEN : receives
+    USER ||--o{ PASSWORD_RESET_TOKEN : receives
+    USER ||--o{ NOTIFICATION : receives
+    USER ||--o{ AUDIT_LOG : performs
+
+    MERCHANT ||--o{ MERCHANT_CATEGORY_LINK : classified_as
+    MERCHANT_CATEGORY ||--o{ MERCHANT_CATEGORY_LINK : classifies
+    MERCHANT ||--o{ MERCHANT_OPERATING_HOUR : opens
+    MERCHANT ||--o{ DELIVERY_ZONE : serves
+    MERCHANT ||--o{ PRODUCT : lists
+    PRODUCT ||--o| INVENTORY : tracks
+    PRODUCT ||--o{ PRODUCT_CATEGORY_LINK : categorized
+    PRODUCT_CATEGORY ||--o{ PRODUCT_CATEGORY_LINK : classifies
+    PRODUCT_CATEGORY ||--o{ PRODUCT_CATEGORY : parent_of
+
+    CUSTOMER_PROFILE ||--o{ ORDER : places
+    MERCHANT ||--o{ ORDER : receives
+    ADDRESS ||--o{ ORDER : destination
+    ORDER ||--|{ ORDER_ITEM : contains
+    PRODUCT ||--o{ ORDER_ITEM : referenced_by
+    ORDER ||--o{ ORDER_STATUS_HISTORY : records
+    ORDER ||--o{ PAYMENT : paid_by
+    PAYMENT ||--o{ PAYMENT_TRANSACTION : receives
+    ORDER ||--o| DELIVERY : fulfilled_by
+    RIDER_PROFILE ||--o{ DELIVERY : assigned
+    DELIVERY ||--o{ DELIVERY_TRACKING_EVENT : tracks
