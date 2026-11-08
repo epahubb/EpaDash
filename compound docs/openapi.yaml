@@ -1,0 +1,130 @@
+openapi: 3.0.3
+info:
+  title: EpaDash Merchant Discovery and Product Catalogue API
+  version: 0.1.0
+  description: Public read-only merchant discovery and product catalogue endpoints.
+servers:
+  - url: /api/v1
+paths:
+  /merchants:
+    get:
+      summary: List and search public merchants
+      parameters:
+        - in: query
+          name: q
+          schema: { type: string, maxLength: 100 }
+        - in: query
+          name: categoryId
+          schema: { type: string, format: uuid }
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 1, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - in: query
+          name: sort
+          schema: { type: string, enum: [relevance, name, newest], default: relevance }
+      responses:
+        '200':
+          description: Public merchant page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollectionResponse'
+        '400': { description: Invalid query parameters }
+  /merchants/{slug}:
+    get:
+      summary: Get public merchant profile
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema: { type: string, maxLength: 120 }
+      responses:
+        '200': { description: Public merchant profile }
+        '404': { description: Merchant not found or not public }
+  /merchants/{slug}/products:
+    get:
+      summary: List published products for a public merchant
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema: { type: string }
+        - in: query
+          name: q
+          schema: { type: string, maxLength: 100 }
+        - in: query
+          name: categoryId
+          schema: { type: string, format: uuid }
+        - in: query
+          name: minPrice
+          schema: { type: number, minimum: 0 }
+        - in: query
+          name: maxPrice
+          schema: { type: number, minimum: 0 }
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 1, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200': { description: Merchant product page }
+        '400': { description: Invalid query parameters }
+        '404': { description: Merchant not found or not public }
+  /products:
+    get:
+      summary: Search and filter public products
+      parameters:
+        - in: query
+          name: q
+          schema: { type: string, maxLength: 100 }
+        - in: query
+          name: merchantId
+          schema: { type: string, format: uuid }
+        - in: query
+          name: categoryId
+          schema: { type: string, format: uuid }
+        - in: query
+          name: minPrice
+          schema: { type: number, minimum: 0 }
+        - in: query
+          name: maxPrice
+          schema: { type: number, minimum: 0 }
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 1, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200': { description: Public product page }
+        '400': { description: Invalid query parameters }
+  /products/{productId}:
+    get:
+      summary: Get one published public product
+      parameters:
+        - in: path
+          name: productId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: Public product detail }
+        '404': { description: Product not found or not public }
+components:
+  schemas:
+    CollectionResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { type: object }
+        pagination:
+          type: object
+          properties:
+            page: { type: integer }
+            limit: { type: integer }
+            totalItems: { type: integer }
+            totalPages: { type: integer }
