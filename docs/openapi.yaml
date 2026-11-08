@@ -1,0 +1,336 @@
+openapi: 3.0.3
+info:
+  title: EpaDash API
+  version: 1.0.0-draft
+  description: Draft contract. Confirm business rules and provider-specific details before implementation.
+servers:
+  - url: https://api.example.com/api/v1
+    description: Placeholder; replace before release.
+  - url: http://localhost:3000/api/v1
+    description: Local development
+security:
+  - bearerAuth: []
+paths:
+  /auth/register:
+    post:
+      security: []
+      summary: Register customer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, displayName]
+              properties:
+                email: {type: string, format: email}
+                password: {type: string, minLength: 12}
+                displayName: {type: string, minLength: 1, maxLength: 120}
+                phone: {type: string, maxLength: 30}
+      responses:
+        '201': {description: Account created}
+        '400': {description: Invalid request}
+        '409': {description: Identity conflict}
+  /auth/login:
+    post:
+      security: []
+      summary: Authenticate user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: {type: string, format: email}
+                password: {type: string}
+      responses:
+        '200': {description: Credentials issued}
+        '401': {description: Invalid credentials or account unavailable}
+  /auth/refresh:
+    post:
+      security: []
+      summary: Rotate or renew credentials
+      responses:
+        '200': {description: Credentials refreshed}
+        '401': {description: Invalid refresh credential}
+  /auth/logout:
+    post:
+      summary: Revoke current refresh session
+      responses:
+        '204': {description: Session revoked}
+  /auth/password/forgot:
+    post:
+      security: []
+      summary: Start password recovery without account enumeration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: {type: string, format: email}
+      responses:
+        '202': {description: Request accepted}
+  /auth/password/reset:
+    post:
+      security: []
+      summary: Reset password with single-use token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, newPassword]
+              properties:
+                token: {type: string}
+                newPassword: {type: string, minLength: 12}
+      responses:
+        '204': {description: Password reset}
+        '400': {description: Invalid or expired token}
+  /users/me:
+    get:
+      summary: Get current profile
+      responses:
+        '200': {description: Current profile}
+    patch:
+      summary: Update permitted current profile fields
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                displayName: {type: string, maxLength: 120}
+                phone: {type: string, maxLength: 30}
+      responses:
+        '200': {description: Profile updated}
+  /merchants:
+    get:
+      security: []
+      summary: Search active public merchants
+      parameters:
+        - {in: query, name: q, schema: {type: string, maxLength: 100}}
+        - {in: query, name: categoryId, schema: {type: string, format: uuid}}
+        - {in: query, name: isOpen, schema: {type: boolean}}
+        - {in: query, name: deliveryAvailable, schema: {type: boolean}}
+        - {$ref: '#/components/parameters/Page'}
+        - {$ref: '#/components/parameters/Limit'}
+      responses:
+        '200': {description: Merchant collection}
+  /merchants/{merchantId}:
+    get:
+      security: []
+      summary: Get public merchant profile
+      parameters:
+        - {$ref: '#/components/parameters/MerchantId'}
+      responses:
+        '200': {description: Merchant profile}
+        '404': {description: Not found}
+  /merchants/{merchantId}/products:
+    get:
+      security: []
+      summary: List published products for merchant
+      parameters:
+        - {$ref: '#/components/parameters/MerchantId'}
+        - {$ref: '#/components/parameters/Page'}
+        - {$ref: '#/components/parameters/Limit'}
+      responses:
+        '200': {description: Product collection}
+  /products:
+    get:
+      security: []
+      summary: Search and filter published products
+      parameters:
+        - {in: query, name: q, schema: {type: string, maxLength: 100}}
+        - {in: query, name: merchantId, schema: {type: string, format: uuid}}
+        - {in: query, name: categoryId, schema: {type: string, format: uuid}}
+        - {in: query, name: minPrice, schema: {type: number, minimum: 0}}
+        - {in: query, name: maxPrice, schema: {type: number, minimum: 0}}
+        - {in: query, name: available, schema: {type: boolean}}
+        - {$ref: '#/components/parameters/Page'}
+        - {$ref: '#/components/parameters/Limit'}
+      responses:
+        '200': {description: Published product collection}
+  /products/{productId}:
+    get:
+      security: []
+      summary: Get published product details
+      parameters:
+        - {in: path, name: productId, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200': {description: Product details}
+        '404': {description: Not found}
+  /orders:
+    get:
+      summary: List orders visible to current caller
+      responses:
+        '200': {description: Scoped order collection}
+    post:
+      summary: Create order; server calculates prices and totals
+      x-required-roles: [CUSTOMER]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [merchantId, deliveryAddressId, items]
+              properties:
+                merchantId: {type: string, format: uuid}
+                deliveryAddressId: {type: string, format: uuid}
+                items:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    required: [productId, quantity]
+                    properties:
+                      productId: {type: string, format: uuid}
+                      quantity: {type: integer, minimum: 1, maximum: 99}
+                customerNote: {type: string, maxLength: 500}
+      responses:
+        '201': {description: Order created}
+        '400': {description: Invalid request}
+        '409': {description: Business-rule conflict}
+  /orders/{orderId}:
+    get:
+      summary: Get order if caller is authorized
+      parameters:
+        - {in: path, name: orderId, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200': {description: Order details}
+        '404': {description: Not found or not visible}
+  /orders/{orderId}/payments:
+    post:
+      summary: Initiate payment for order
+      x-required-roles: [CUSTOMER]
+      parameters:
+        - {in: path, name: orderId, required: true, schema: {type: string, format: uuid}}
+        - {in: header, name: Idempotency-Key, required: true, schema: {type: string, maxLength: 100}}
+      responses:
+        '201': {description: Payment provider next action}
+        '409': {description: Payment/order state conflict}
+  /payments/webhooks/{provider}:
+    post:
+      security: []
+      summary: Receive signed payment provider event; verify signature and deduplicate
+      parameters:
+        - {in: path, name: provider, required: true, schema: {type: string}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {type: object, additionalProperties: true}
+      responses:
+        '200': {description: Event accepted idempotently}
+        '400': {description: Invalid event}
+        '401': {description: Invalid signature}
+  /rider/deliveries:
+    get:
+      summary: List deliveries assigned to current rider
+      x-required-roles: [RIDER]
+      responses:
+        '200': {description: Assigned delivery collection}
+  /deliveries/{deliveryId}:
+    get:
+      summary: Get delivery for authorized participant
+      parameters:
+        - {in: path, name: deliveryId, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200': {description: Delivery details}
+        '404': {description: Not found or not visible}
+  /admin/deliveries/{deliveryId}/assign:
+    post:
+      summary: Assign rider
+      x-required-roles: [ADMIN]
+      parameters:
+        - {in: path, name: deliveryId, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [riderId]
+              properties:
+                riderId: {type: string, format: uuid}
+      responses:
+        '200': {description: Rider assigned}
+        '409': {description: Assignment conflict}
+  /rider/deliveries/{deliveryId}/status:
+    patch:
+      summary: Update status for delivery assigned to current rider
+      x-required-roles: [RIDER]
+      parameters:
+        - {in: path, name: deliveryId, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: {type: string, enum: [ACCEPTED, PICKED_UP, IN_TRANSIT, DELIVERED, FAILED]}
+                note: {type: string, maxLength: 500}
+      responses:
+        '200': {description: Status updated}
+        '403': {description: Not assigned to caller}
+        '409': {description: Invalid transition}
+  /notifications:
+    get:
+      summary: List current user's notifications
+      responses:
+        '200': {description: Notification collection}
+  /notifications/{notificationId}/read:
+    patch:
+      summary: Mark own notification as read
+      parameters:
+        - {in: path, name: notificationId, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '204': {description: Marked read}
+  /admin/users/{userId}/status:
+    patch:
+      summary: Change user account status and audit action
+      x-required-roles: [ADMIN]
+      parameters:
+        - {in: path, name: userId, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: {type: string, enum: [ACTIVE, SUSPENDED, DEACTIVATED]}
+                reason: {type: string, maxLength: 500}
+      responses:
+        '200': {description: Status updated}
+        '403': {description: Insufficient permission}
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    Page:
+      in: query
+      name: page
+      schema: {type: integer, minimum: 1, default: 1}
+    Limit:
+      in: query
+      name: limit
+      schema: {type: integer, minimum: 1, maximum: 100, default: 20}
+    MerchantId:
+      in: path
+      name: merchantId
+      required: true
+      schema: {type: string, format: uuid}

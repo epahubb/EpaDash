@@ -1,0 +1,27 @@
+flowchart TD
+  A[Customer submits registration] --> B[Validate request]
+  B --> C{Valid?}
+  C -- No --> D[Return validation error]
+  C -- Yes --> E[Hash password and create account]
+  E --> F{Verification required?}
+  F -- Yes --> G[Send verification challenge]
+  F -- No --> H[Account eligible for login]
+  G --> H
+  H --> I[Login and issue credentials]
+  I --> J[Browse active merchants and published products]
+  J --> K[Submit order request]
+  K --> L[Validate merchant, products, stock and address]
+  L --> M{Eligible and available?}
+  M -- No --> N[Return business-rule conflict]
+  M -- Yes --> O[Calculate totals and reserve stock]
+  O --> P[Create pending-payment order]
+  P --> Q[Initiate provider payment]
+  Q --> R[Verify signed provider event and deduplicate]
+  R --> S{Payment successful?}
+  S -- No --> T[Mark failed and release reservation]
+  S -- Yes --> U[Record payment and confirm order]
+  U --> V[Prepare order and assign rider]
+  V --> W[Rider accepts and picks up]
+  W --> X[Update delivery status and tracking]
+  X --> Y[Notify customer and merchant]
+  Y --> Z[Complete delivery and order]
