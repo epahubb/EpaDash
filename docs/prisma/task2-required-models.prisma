@@ -1,0 +1,36 @@
+// Integration reference only — merge these models/fields into the Task 3 schema
+// after checking exact existing names and relations. Do not paste blindly if duplicates exist.
+//
+// Required User fields used by this starter:
+// id, email (unique), displayName, phone (nullable), passwordHash, status, createdAt, updatedAt
+// Required User relation:
+// userRoles UserRole[], refreshTokens RefreshToken[], passwordResetTokens PasswordResetToken[]
+//
+// Required UserRole fields/relation:
+// userId, role; relation to User; unique or composite primary key on [userId, role].
+
+model RefreshToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt])
+  @@index([expiresAt])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, usedAt])
+  @@index([expiresAt])
+}
