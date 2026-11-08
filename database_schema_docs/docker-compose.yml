@@ -1,0 +1,20 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: epadash-task3-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: epadash
+      POSTGRES_PASSWORD: epadash_dev_password
+      POSTGRES_DB: epadash
+    ports:
+      - "5432:5432"
+    volumes:
+      - epadash_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U epadash -d epadash"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+volumes:
+  epadash_pgdata:
