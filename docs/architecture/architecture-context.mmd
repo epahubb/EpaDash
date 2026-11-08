@@ -1,0 +1,19 @@
+flowchart TB
+    Client[Customer / Merchant / Rider / Admin Clients]
+    API[Versioned REST API]
+    Middleware[Middleware: Auth, Validation, Rate Limits, Errors]
+    Services[Application Services]
+    DB[(PostgreSQL Database)]
+    Payments[Payment Provider Adapter]
+    Maps[Mapping / Geolocation Adapter]
+    Notify[Notification Provider Adapter]
+    Storage[Media Storage Adapter]
+
+    Client --> API
+    API --> Middleware
+    Middleware --> Services
+    Services --> DB
+    Services --> Payments
+    Services --> Maps
+    Services --> Notify
+    Services --> Storage
