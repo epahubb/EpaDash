@@ -1,0 +1,34 @@
+{
+  "name": "epadash-task3-database",
+  "version": "1.0.0",
+  "private": true,
+  "description": "EpaDash PostgreSQL and Prisma database implementation for Task 3",
+  "scripts": {
+    "db:up": "docker compose up -d db",
+    "db:down": "docker compose down",
+    "prisma:generate": "prisma generate",
+    "db:migration:generate": "node scripts/generate-migration.mjs",
+    "db:migrate": "prisma migrate deploy",
+    "db:seed": "prisma db seed",
+    "db:setup": "npm run db:up && npm run db:migration:generate && npm run db:migrate && npm run db:seed",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "db:validate": "prisma validate",
+    "db:status": "prisma migrate status"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "6.19.0",
+    "argon2": "0.44.0"
+  },
+  "devDependencies": {
+    "prisma": "6.19.0",
+    "tsx": "4.20.6",
+    "typescript": "5.9.3",
+    "vitest": "3.2.4",
+    "@types/node": "22.19.1"
+  }
+}
