@@ -1,0 +1,26 @@
+{
+  "name": "epadash",
+  "version": "1.0.0",
+  "private": true,
+  "description": "EpaDash delivery platform — Customer, Rider, Merchant & Admin applications",
+  "scripts": {
+    "dev:customer": "pnpm --filter @epadash/customer dev",
+    "dev:rider": "pnpm --filter @epadash/rider dev",
+    "dev:merchant": "pnpm --filter @epadash/merchant dev",
+    "dev:admin": "pnpm --filter @epadash/admin dev",
+    "build:customer": "pnpm --filter @epadash/customer build",
+    "build:rider": "pnpm --filter @epadash/rider build",
+    "build:merchant": "pnpm --filter @epadash/merchant build",
+    "build:admin": "pnpm --filter @epadash/admin build",
+    "build:all": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "clean": "pnpm -r clean",
+    "test:api": "node scripts/verify-api.js",
+    "start:backend": "node test-server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  }
+}
+
