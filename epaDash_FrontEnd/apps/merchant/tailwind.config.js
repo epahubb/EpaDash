@@ -1,31 +1,14 @@
 /** @type {import('tailwindcss').Config} */
+import { epadashTheme } from '../../packages/shared/src/design-tokens.js';
+
 export default {
   content: [
-    './src/**/*.{js,jsx}',
-    '../../packages/shared/src/**/*.{js,jsx}',
+    './index.html',
+    './src/**/*.{js,ts,jsx,tsx}',
+    '../../packages/shared/src/**/*.{js,ts,jsx,tsx}',
   ],
   theme: {
-    extend: {
-      colors: {
-        primary: {
-          50: '#ecfdf5',
-          100: '#d1fae5',
-          200: '#a7f3d0',
-          300: '#6ee7b7',
-          400: '#34d399',
-          500: '#10b981',
-          600: '#059669',
-          700: '#047857',
-          800: '#065f46',
-          900: '#064e3b',
-          950: '#022c22',
-        },
-      },
-      fontFamily: {
-        sans: ['Inter', 'sans-serif'],
-      },
-    },
+    extend: epadashTheme,
   },
   plugins: [],
 };
-

@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { generateId } from "../utils";
 export * from "../auth/auth-store";
+export * from "./app-store";
 const useNotificationStore = create((set) => ({
   notifications: [],
   addNotification: (notification) => {
