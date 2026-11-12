@@ -1,0 +1,166 @@
+/* ============================================================
+   EpaDash Shared Global Styles
+   Import this file at the top of each app's index.css
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+/* ── Tailwind directives ───────────────────────────────────── */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Base reset & typography ──────────────────────────────── */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply bg-gray-50 text-gray-900 font-sans;
+    margin: 0;
+    padding: 0;
+    min-height: 100dvh;
+  }
+
+  /* Focus rings — visible only for keyboard navigation */
+  :focus-visible {
+    @apply outline-none ring-2 ring-primary-500 ring-offset-2;
+  }
+
+  /* Headings */
+  h1 { @apply text-3xl font-bold tracking-tight text-gray-900; }
+  h2 { @apply text-2xl font-bold tracking-tight text-gray-900; }
+  h3 { @apply text-xl font-semibold text-gray-900; }
+  h4 { @apply text-lg font-semibold text-gray-800; }
+  h5 { @apply text-base font-semibold text-gray-800; }
+  h6 { @apply text-sm font-semibold text-gray-700; }
+
+  p  { @apply text-sm text-gray-600 leading-relaxed; }
+
+  a  {
+    @apply text-primary-600 hover:text-primary-700 transition-colors duration-150;
+    text-underline-offset: 2px;
+  }
+
+  /* ── Scrollbars ───────────────────────────────────────────── */
+  ::-webkit-scrollbar       { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { @apply bg-transparent; }
+  ::-webkit-scrollbar-thumb { @apply bg-gray-300 rounded-full; }
+  ::-webkit-scrollbar-thumb:hover { @apply bg-gray-400; }
+
+  /* ── Selection ───────────────────────────────────────────── */
+  ::selection {
+    @apply bg-primary-100 text-primary-900;
+  }
+}
+
+/* ── Shared component layer ───────────────────────────────── */
+@layer components {
+  /* ─ Cards ─ */
+  .epa-card        { @apply bg-white rounded-xl border border-gray-200 shadow-sm; }
+  .epa-card-hover  { @apply epa-card hover:shadow-md hover:border-gray-300 transition-all duration-200; }
+  .epa-stat-card   { @apply epa-card p-5; }
+
+  /* ─ Badges ─ */
+  .epa-badge         { @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ring-1 ring-inset; }
+  .epa-badge-success { @apply epa-badge bg-emerald-50 text-emerald-700 ring-emerald-600/20; }
+  .epa-badge-warning { @apply epa-badge bg-amber-50 text-amber-700 ring-amber-600/20; }
+  .epa-badge-danger  { @apply epa-badge bg-red-50 text-red-700 ring-red-600/20; }
+  .epa-badge-info    { @apply epa-badge bg-blue-50 text-blue-700 ring-blue-600/20; }
+  .epa-badge-gray    { @apply epa-badge bg-gray-100 text-gray-700 ring-gray-600/10; }
+  .epa-badge-purple  { @apply epa-badge bg-purple-50 text-purple-700 ring-purple-600/20; }
+
+  /* ─ Tables ─ */
+  .epa-table-wrapper { @apply w-full overflow-x-auto rounded-xl border border-gray-200 shadow-sm; }
+  .epa-th            { @apply px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50; }
+  .epa-td            { @apply px-4 py-3.5 text-sm text-gray-700 whitespace-nowrap; }
+  .epa-tr-hover      { @apply hover:bg-gray-50/70 transition-colors duration-100; }
+
+  /* ─ Form ─ */
+  .epa-input {
+    @apply block w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm text-gray-900 shadow-sm
+           placeholder:text-gray-400 transition-colors duration-150
+           focus:outline-none focus:ring-2 focus:ring-offset-0 focus:border-primary-500 focus:ring-primary-500/20
+           disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed;
+  }
+  .epa-input-error {
+    @apply border-red-300 focus:border-red-500 focus:ring-red-500/20;
+  }
+  .epa-label {
+    @apply block text-sm font-medium text-gray-700 mb-1.5;
+  }
+  .epa-error-text {
+    @apply mt-1.5 text-sm text-red-600;
+  }
+  .epa-helper-text {
+    @apply mt-1.5 text-sm text-gray-500;
+  }
+
+  /* ─ Skeleton loaders ─ */
+  .epa-skeleton {
+    @apply bg-gray-200 rounded animate-pulse;
+  }
+  .epa-skeleton-shimmer {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    @apply animate-shimmer rounded;
+  }
+
+  /* ─ Dividers ─ */
+  .epa-divider       { @apply border-t border-gray-200 my-4; }
+  .epa-divider-dashed { @apply border-t border-dashed border-gray-200 my-4; }
+
+  /* ─ Page layout helpers ─ */
+  .epa-page          { @apply p-4 sm:p-6 lg:p-8 space-y-6; }
+  .epa-section       { @apply space-y-4; }
+  .epa-section-title { @apply text-lg font-semibold text-gray-900; }
+
+  /* ─ Responsive grid presets ─ */
+  .epa-grid-stats    { @apply grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4; }
+  .epa-grid-cards    { @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4; }
+  .epa-grid-2        { @apply grid grid-cols-1 md:grid-cols-2 gap-4; }
+  .epa-grid-3        { @apply grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4; }
+}
+
+/* ── Utility overrides ────────────────────────────────────── */
+@layer utilities {
+  /* Smooth fade animation utilities */
+  .animate-in { animation-fill-mode: both; }
+  .fade-in    { animation-name: fade-in; animation-duration: 200ms; animation-timing-function: ease-out; }
+  .slide-in-from-top-4 { animation-name: slide-down; animation-duration: 200ms; animation-timing-function: ease-out; }
+  .zoom-in-95 { animation-name: zoom-in; animation-duration: 150ms; animation-timing-function: ease-out; }
+
+  /* Text balance for headings */
+  .text-balance { text-wrap: balance; }
+
+  /* Truncate helpers */
+  .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+
+  /* Scrollbar hide */
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+  /* Thin scrollbar */
+  .scrollbar-thin::-webkit-scrollbar { width: 4px; height: 4px; }
+
+  /* Full bleed on mobile */
+  .mobile-bleed { margin-inline: calc(-1 * theme(spacing.4)); }
+}
+
+/* ── Additional keyframes ────────────────────────────────── */
+@keyframes zoom-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+

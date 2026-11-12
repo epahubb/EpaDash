@@ -140,6 +140,15 @@ function EmptyState({
 export * from "./notification-container";
 export * from "./full-page-loader";
 export * from "./error-boundary";
+export * from "./card";
+export * from "./modal";
+export * from "./badge";
+export * from "./dropdown";
+export * from "./pagination";
+export * from "./inputs";
+export * from "./table";
+export * from "./navigation";
+export * from "./media";
 export {
   Button,
   EmptyState,
@@ -147,5 +156,5 @@ export {
   FormField,
   LoadingSpinner,
   SelectInput,
-  TextInput
+  TextInput,
 };
