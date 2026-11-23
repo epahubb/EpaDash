@@ -1,0 +1,38 @@
+erDiagram
+  USER ||--o{ USER_ROLE : grants
+  USER ||--o| CUSTOMER_PROFILE : has
+  USER ||--o| MERCHANT : owns
+  USER ||--o| RIDER_PROFILE : has
+  USER ||--o{ ADDRESS : saves
+  USER ||--o{ REFRESH_TOKEN : receives
+  USER ||--o{ PASSWORD_RESET_TOKEN : receives
+  USER ||--o{ NOTIFICATION : receives
+  USER ||--o{ AUDIT_LOG : performs
+  USER ||--o{ ORDER_STATUS_HISTORY : changes
+  USER ||--o{ DELIVERY_ASSIGNMENT : assigns
+
+  MERCHANT ||--o{ MERCHANT_CATEGORY_LINK : classified
+  MERCHANT_CATEGORY ||--o{ MERCHANT_CATEGORY_LINK : classifies
+  MERCHANT ||--o{ MERCHANT_OPERATING_HOUR : schedule
+  MERCHANT ||--o{ DELIVERY_ZONE : serves
+  MERCHANT ||--o{ PRODUCT : lists
+  PRODUCT ||--o| INVENTORY : stock
+  INVENTORY ||--o{ INVENTORY_MOVEMENT : records
+  PRODUCT ||--o{ PRODUCT_CATEGORY_LINK : classified
+  PRODUCT_CATEGORY ||--o{ PRODUCT_CATEGORY_LINK : classifies
+  PRODUCT_CATEGORY ||--o{ PRODUCT_CATEGORY : parent_child
+
+  CUSTOMER_PROFILE ||--o{ ORDER : places
+  MERCHANT ||--o{ ORDER : fulfils
+  ADDRESS o|--o{ ORDER : source_address_optional
+  ORDER ||--|{ ORDER_ITEM : contains
+  PRODUCT ||--o{ ORDER_ITEM : historical_product_reference
+  ORDER ||--o{ ORDER_STATUS_HISTORY : status_history
+  ORDER ||--o{ PAYMENT : payment_attempts
+  PAYMENT ||--o{ PAYMENT_TRANSACTION : provider_events
+  PAYMENT ||--o{ REFUND : refunds
+  ORDER ||--o| DELIVERY : delivery_record
+  RIDER_PROFILE ||--o{ DELIVERY : current_rider
+  DELIVERY ||--o{ DELIVERY_ASSIGNMENT : assignment_history
+  RIDER_PROFILE ||--o{ DELIVERY_ASSIGNMENT : assigned_rider
+  DELIVERY ||--o{ DELIVERY_TRACKING_EVENT : tracking

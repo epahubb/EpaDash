@@ -1,0 +1,13 @@
+flowchart LR
+    Web[Customer, merchant, rider and admin clients]
+    API[Planned Express REST API]
+    Services[TypeScript domain services]
+    DB[(PostgreSQL via Prisma)]
+    Payment[Payment provider]
+    Storage[Object storage]
+
+    Web --> API
+    API --> Services
+    Services --> DB
+    Services -. planned integration .-> Payment
+    Services -. planned integration .-> Storage

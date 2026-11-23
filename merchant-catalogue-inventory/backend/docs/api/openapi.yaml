@@ -1,0 +1,944 @@
+openapi: 3.0.3
+info:
+  title: EpaDash API
+  version: 1.0.0-draft
+  description: Draft contract. Confirm business rules and provider-specific details before implementation.
+servers:
+  - url: https://api.example.com/api/v1
+    description: Placeholder; replace before release.
+  - url: http://localhost:3000/api/v1
+    description: Local development
+security:
+  - bearerAuth: []
+paths:
+  /uploads/presign:
+    post:
+      x-implementation-status: implemented
+      summary: Issue an upload URL for a product image
+      description: Requires ownership of an editable product. The URL is valid for five minutes and cannot replace an uploaded file. Send the supplied headers and the original file with its exact Content-Length.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [productId, contentType, sizeBytes, checksumSha256]
+              properties:
+                productId: {type: string, format: uuid}
+                contentType: {type: string, enum: [image/jpeg, image/png, image/webp]}
+                sizeBytes: {type: integer, minimum: 16, maximum: 5242880}
+                checksumSha256: {type: string, description: Base64 encoding of the SHA-256 digest.}
+      responses:
+        '201':
+          description: Pending image upload
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [imageId, method, url, headers, expiresIn]
+                    properties:
+                      imageId: {type: string, format: uuid}
+                      method: {type: string, enum: [PUT]}
+                      url: {type: string, format: uri}
+                      headers: {type: object, additionalProperties: {type: string}}
+                      expiresIn: {type: integer, example: 300}
+        '400': {description: 'Invalid image type, size, or checksum'}
+        '401': {description: Access token missing or invalid}
+        '403': {description: Merchant role required}
+        '404': {description: No matching editable product}
+        '409': {description: Image or pending upload limit reached}
+        '503': {description: Product image storage unavailable}
+  /auth/register:
+    post:
+      security: []
+      summary: Register customer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, displayName]
+              properties:
+                email: {type: string, format: email}
+                password: {type: string, minLength: 12}
+                displayName: {type: string, minLength: 1, maxLength: 120}
+                phone: {type: string, maxLength: 30}
+      responses:
+        '201': {description: Account created}
+        '400': {description: Invalid request}
+        '409': {description: Identity conflict}
+  /auth/login:
+    post:
+      x-implementation-status: implemented
+      security: []
+      summary: Authenticate user
+      description: Returns a 15-minute bearer access token in data.accessToken for an active account.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: {type: string, format: email}
+                password: {type: string}
+      responses:
+        '200': {description: Credentials issued}
+        '400': {description: Invalid request}
+        '401': {description: Invalid credentials or account unavailable}
+        '429': {description: Too many login attempts}
+  /auth/refresh:
+    post:
+      security: []
+      summary: Rotate or renew credentials
+      responses:
+        '200': {description: Credentials refreshed}
+        '401': {description: Invalid refresh credential}
+  /auth/logout:
+    post:
+      summary: Revoke current refresh session
+      responses:
+        '204': {description: Session revoked}
+  /auth/password/forgot:
+    post:
+      security: []
+      summary: Start password recovery without account enumeration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: {type: string, format: email}
+      responses:
+        '202': {description: Request accepted}
+  /auth/password/reset:
+    post:
+      security: []
+      summary: Reset password with single-use token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, newPassword]
+              properties:
+                token: {type: string}
+                newPassword: {type: string, minLength: 12}
+      responses:
+        '204': {description: Password reset}
+        '400': {description: Invalid or expired token}
+  /users/me:
+    get:
+      summary: Get current profile
+      responses:
+        '200': {description: Current profile}
+    patch:
+      summary: Update permitted current profile fields
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                displayName: {type: string, maxLength: 120}
+                phone: {type: string, maxLength: 30}
+      responses:
+        '200': {description: Profile updated}
+  /merchants:
+    post:
+      x-implementation-status: implemented
+      summary: Submit a merchant application
+      description: Requires an active MERCHANT account. The new profile is private and pending approval.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - {$ref: '#/components/schemas/MerchantProfileInput'}
+                - {type: object, required: [name, slug]}
+      responses:
+        '201': {description: Merchant application created}
+        '400': {description: Invalid request}
+        '401': {description: Access token missing or invalid}
+        '403': {description: Merchant role required}
+        '409': {description: Merchant already exists or slug is taken}
+    get:
+      security: []
+      summary: Search active public merchants
+      parameters:
+        - {in: query, name: q, schema: {type: string, maxLength: 100}}
+        - {in: query, name: categoryId, schema: {type: string, format: uuid}}
+        - {in: query, name: isOpen, schema: {type: boolean}}
+        - {in: query, name: deliveryAvailable, schema: {type: boolean}}
+        - {$ref: '#/components/parameters/Page'}
+        - {$ref: '#/components/parameters/Limit'}
+      responses:
+        '200': {description: Merchant collection}
+  /merchant/profile:
+    get:
+      x-implementation-status: implemented
+      summary: Read the authenticated merchant's profile and operating hours
+      responses:
+        '200': {description: Merchant profile}
+        '401': {description: Access token missing or invalid}
+        '403': {description: Merchant role required}
+        '404': {description: No owned merchant profile}
+    patch:
+      x-implementation-status: implemented
+      summary: Update the authenticated merchant's profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/MerchantProfileInput'}
+      responses:
+        '200': {description: Updated merchant profile}
+        '400': {description: Invalid or empty profile fields}
+        '401': {description: Access token missing or invalid}
+        '403': {description: Merchant role required}
+        '404': {description: No owned merchant profile}
+        '409': {description: Slug already in use}
+  /merchant/hours:
+    put:
+      x-implementation-status: implemented
+      summary: Replace weekly operating hours
+      description: Sunday is day 0. Omitted days are removed. Open days require opening and closing times within the same day.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [hours]
+              additionalProperties: false
+              properties:
+                hours:
+                  type: array
+                  maxItems: 7
+                  items:
+                    type: object
+                    additionalProperties: false
+                    required: [dayOfWeek, isClosed]
+                    properties:
+                      dayOfWeek: {type: integer, minimum: 0, maximum: 6}
+                      isClosed: {type: boolean}
+                      opensAt: {type: string, nullable: true, example: '08:30'}
+                      closesAt: {type: string, nullable: true, example: '17:00'}
+      responses:
+        '200': {description: Merchant profile with updated hours}
+        '400': {description: Invalid schedule or duplicate day}
+        '401': {description: Access token missing or invalid}
+        '403': {description: Merchant role required}
+        '404': {description: No owned merchant profile}
+  /merchant/status:
+    patch:
+      x-implementation-status: implemented
+      summary: Set whether the authenticated merchant accepts orders
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [acceptsOrders]
+              additionalProperties: false
+              properties:
+                acceptsOrders: {type: boolean}
+      responses:
+        '200': {description: Updated merchant profile}
+        '400': {description: Invalid request}
+        '401': {description: Access token missing or invalid}
+        '403': {description: Merchant role required}
+        '404': {description: No owned merchant profile}
+        '409': {description: An inactive merchant cannot start accepting orders}
+  /merchant/products:
+    get:
+      x-implementation-status: implemented
+      summary: List the authenticated merchant's products
+      parameters:
+        - {$ref: '#/components/parameters/Page'}
+        - {$ref: '#/components/parameters/Limit'}
+        - in: query
+          name: status
+          description: If omitted, archived products are excluded.
+          schema: {type: string, enum: [DRAFT, PUBLISHED, ARCHIVED]}
+      responses:
+        '200': {description: Paginated owned products}
+        '400': {description: Invalid query}
+        '401': {description: Access token missing or invalid}
+        '403': {description: Merchant role required}
+        '404': {description: No owned merchant profile}
+    post:
+      x-implementation-status: implemented
+      summary: Create a draft product with zero stock
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - {$ref: '#/components/schemas/MerchantProductInput'}
+                - {type: object, required: [name, slug, unitPrice]}
+      responses:
+        '201': {description: Draft product created}
+        '400': {description: Invalid product or unknown category}
+        '401': {description: Access token missing or invalid}
+        '403': {description: Merchant role required}
+        '404': {description: No owned merchant profile}
+        '409': {description: Slug or SKU already in use by this merchant}
+  /merchant/products/{productId}:
+    parameters:
+      - {$ref: '#/components/parameters/ProductId'}
+    get:
+      x-implementation-status: implemented
+      summary: Read one owned product
+      responses:
+        '200': {description: Product details and assigned categories}
+        '401': {description: Access token missing or invalid}
+        '403': {description: Merchant role required}
+        '404': {description: No matching owned product}
+    patch:
+      x-implementation-status: implemented
+      summary: Edit an owned product
+      description: Providing categoryIds replaces the existing set. An empty array clears it.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/MerchantProductInput'}
+      responses:
+        '200': {description: Updated product}
+        '400': {description: Invalid product or unknown category}
+        '401': {description: Access token missing or invalid}
+        '403': {description: Merchant role required}
+        '404': {description: No matching editable product}
+        '409': {description: Slug or SKU already in use by this merchant}
+    delete:
+      x-implementation-status: implemented
+      summary: Archive an owned product
+      responses:
+        '204': {description: Product archived and unavailable}
+        '401': {description: Access token missing or invalid}
+        '403': {description: Merchant role required}
+        '404': {description: No matching owned product}
+  /merchant/products/{productId}/status:
+    parameters:
+      - {$ref: '#/components/parameters/ProductId'}
+    patch:
+      x-implementation-status: implemented
+      summary: Publish or unpublish an owned product
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [status]
+              properties:
+                status: {type: string, enum: [DRAFT, PUBLISHED]}
+      responses:
+        '200': {description: Updated product}
+        '400': {description: Invalid request}
+        '401': {description: Access token missing or invalid}
+        '403': {description: Merchant role required}
+        '404': {description: No matching editable product}
+        '409': {description: Only active merchants can publish products}
+  /merchant/products/{productId}/availability:
+    parameters:
+      - {$ref: '#/components/parameters/ProductId'}
+    patch:
+      x-implementation-status: implemented
+      summary: Set availability for an owned product
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [isAvailable]
+              properties:
+                isAvailable: {type: boolean}
+      responses:
+        '200': {description: Updated product}
+        '400': {description: Invalid request}
+        '401': {description: Access token missing or invalid}
+        '403': {description: Merchant role required}
+        '404': {description: No matching editable product}
+  /merchant/products/{productId}/images:
+    parameters:
+      - {$ref: '#/components/parameters/ProductId'}
+    get:
+      x-implementation-status: implemented
+      summary: List registered images for an owned product
+      responses:
+        '200': {$ref: '#/components/responses/ProductImageList'}
+        '401': {description: Access token missing or invalid}
+        '403': {description: Merchant role required}
+        '404': {description: No matching owned product}
+  /merchant/products/{productId}/images/{imageId}:
+    parameters:
+      - {$ref: '#/components/parameters/ProductId'}
+      - {$ref: '#/components/parameters/ProductImageId'}
+    get:
+      x-implementation-status: implemented
+      summary: Obtain a short-lived image URL as the product owner
+      responses:
+        '200': {$ref: '#/components/responses/ProductImageReadUrl'}
+        '401': {description: Access token missing or invalid}
+        '403': {description: Merchant role required}
+        '404': {description: No matching registered image}
+        '503': {description: Product image storage unavailable}
+  /merchant/products/{productId}/images/{imageId}/complete:
+    parameters:
+      - {$ref: '#/components/parameters/ProductId'}
+      - {$ref: '#/components/parameters/ProductImageId'}
+    post:
+      x-implementation-status: implemented
+      summary: Verify an upload and register it on an owned product
+      description: Complete a pending upload within ten minutes. Repeating a completed registration returns the same metadata.
+      responses:
+        '200':
+          description: Registered image metadata
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: {$ref: '#/components/schemas/ProductImage'}
+        '401': {description: Access token missing or invalid}
+        '403': {description: Merchant role required}
+        '404': {description: No matching image for an editable owned product}
+        '409': {description: Uploaded object missing or failed verification}
+        '410': {description: Pending image upload expired}
+        '502': {description: Storage could not verify the uploaded object}
+        '503': {description: Product image storage unavailable}
+  /products/{productId}/images:
+    parameters:
+      - {$ref: '#/components/parameters/ProductId'}
+    get:
+      x-implementation-status: implemented
+      security: []
+      summary: List images of a published and available product
+      description: The merchant must be active and public.
+      responses:
+        '200': {$ref: '#/components/responses/ProductImageList'}
+        '404': {description: No matching public product}
+  /products/{productId}/images/{imageId}:
+    parameters:
+      - {$ref: '#/components/parameters/ProductId'}
+      - {$ref: '#/components/parameters/ProductImageId'}
+    get:
+      x-implementation-status: implemented
+      security: []
+      summary: Obtain a short-lived URL for a publicly visible product image
+      responses:
+        '200': {$ref: '#/components/responses/ProductImageReadUrl'}
+        '404': {description: No matching public image}
+        '503': {description: Product image storage unavailable}
+  /merchant/products/{productId}/inventory:
+    parameters:
+      - {$ref: '#/components/parameters/ProductId'}
+    get:
+      x-implementation-status: implemented
+      summary: View stock for an owned product
+      description: Legacy products without an inventory record report zero stock and a null updatedAt until the first stock update.
+      responses:
+        '200':
+          description: Current stock and available quantity
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/MerchantInventoryResult'}
+        '401': {description: Access token missing or invalid}
+        '403': {description: Merchant role required}
+        '404': {description: No matching owned product}
+    put:
+      x-implementation-status: implemented
+      summary: Set on-hand quantity and optionally the low-stock threshold
+      description: Replaying an identical successful request with the same key returns its original result. A stock change creates a movement.
+      parameters:
+        - {$ref: '#/components/parameters/InventoryIdempotencyKey'}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [quantityOnHand]
+              properties:
+                quantityOnHand: {type: integer, minimum: 0, maximum: 2147483647}
+                lowStockLevel: {type: integer, minimum: 0, maximum: 2147483647}
+      responses:
+        '200':
+          description: Inventory result and movement ID if quantity changed
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/MerchantInventoryResult'}
+        '400': {description: Invalid request or missing idempotency key}
+        '401': {description: Access token missing or invalid}
+        '403': {description: Merchant role required}
+        '404': {description: No matching editable product}
+        '409': {description: Stock below reserved quantity or idempotency key conflict}
+  /merchant/products/{productId}/inventory/adjustments:
+    parameters:
+      - {$ref: '#/components/parameters/ProductId'}
+    post:
+      x-implementation-status: implemented
+      summary: Record a signed stock adjustment against an owned product
+      description: Replaying an identical successful request with the same key returns its original result.
+      parameters:
+        - {$ref: '#/components/parameters/InventoryIdempotencyKey'}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [quantityDelta]
+              properties:
+                quantityDelta:
+                  type: integer
+                  minimum: -2147483647
+                  maximum: 2147483647
+                  not: {enum: [0]}
+                note: {type: string, minLength: 1, maxLength: 500}
+      responses:
+        '200':
+          description: Inventory result and adjustment movement ID
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/MerchantInventoryResult'}
+        '400': {description: Invalid request or missing idempotency key}
+        '401': {description: Access token missing or invalid}
+        '403': {description: Merchant role required}
+        '404': {description: No matching editable product}
+        '409': {description: 'Stock would fall below reservations, exceed the stock range, or conflict with an existing key'}
+  /merchant/products/{productId}/inventory/movements:
+    parameters:
+      - {$ref: '#/components/parameters/ProductId'}
+    get:
+      x-implementation-status: implemented
+      summary: Read paginated stock movement history for an owned product
+      parameters:
+        - {$ref: '#/components/parameters/Page'}
+        - {$ref: '#/components/parameters/Limit'}
+      responses:
+        '200': {description: Movements ordered by creation time newest first}
+        '400': {description: Invalid product identifier or query}
+        '401': {description: Access token missing or invalid}
+        '403': {description: Merchant role required}
+        '404': {description: No matching owned product}
+  /merchant/product-categories:
+    get:
+      x-implementation-status: implemented
+      summary: List shared product categories
+      parameters:
+        - {$ref: '#/components/parameters/Page'}
+        - {$ref: '#/components/parameters/Limit'}
+      responses:
+        '200': {description: Paginated product categories}
+        '400': {description: Invalid query}
+        '401': {description: Access token missing or invalid}
+        '403': {description: Merchant role required}
+  /admin/product-categories:
+    post:
+      x-implementation-status: implemented
+      summary: Create a shared product category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [name, slug]
+              properties:
+                name: {type: string, minLength: 1, maxLength: 120}
+                slug: {type: string, minLength: 1, maxLength: 100}
+                parentId: {type: string, format: uuid}
+      responses:
+        '201': {description: Category created}
+        '400': {description: Invalid request}
+        '401': {description: Access token missing or invalid}
+        '403': {description: Administrator role required}
+        '404': {description: Parent category unavailable}
+        '409': {description: Name or slug already in use}
+  /admin/product-categories/{categoryId}:
+    parameters:
+      - {name: categoryId, in: path, required: true, schema: {type: string, format: uuid}}
+    patch:
+      x-implementation-status: implemented
+      summary: Update the name or slug of a shared product category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              minProperties: 1
+              properties:
+                name: {type: string, minLength: 1, maxLength: 120}
+                slug: {type: string, minLength: 1, maxLength: 100}
+      responses:
+        '200': {description: Category updated}
+        '400': {description: Invalid request}
+        '401': {description: Access token missing or invalid}
+        '403': {description: Administrator role required}
+        '404': {description: Category unavailable}
+        '409': {description: Name or slug already in use}
+    delete:
+      x-implementation-status: implemented
+      summary: Delete an unused leaf product category
+      responses:
+        '204': {description: Category deleted}
+        '401': {description: Access token missing or invalid}
+        '403': {description: Administrator role required}
+        '404': {description: Category unavailable}
+        '409': {description: Category has child categories or assigned products}
+  /admin/merchants/{merchantId}/status:
+    patch:
+      x-implementation-status: implemented
+      summary: Approve or suspend a merchant as an administrator
+      description: Suspension hides the profile and disables order acceptance.
+      parameters:
+        - {$ref: '#/components/parameters/MerchantId'}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              additionalProperties: false
+              properties:
+                status: {type: string, enum: [ACTIVE, SUSPENDED]}
+      responses:
+        '200': {description: Merchant status updated and audited}
+        '400': {description: Invalid status or merchant identifier}
+        '401': {description: Access token missing or invalid}
+        '403': {description: Administrator role required}
+        '404': {description: Merchant unavailable}
+  /merchants/{merchantId}:
+    get:
+      security: []
+      summary: Get public merchant profile
+      parameters:
+        - {$ref: '#/components/parameters/MerchantId'}
+      responses:
+        '200': {description: Merchant profile}
+        '404': {description: Not found}
+  /merchants/{merchantId}/products:
+    get:
+      security: []
+      summary: List published products for merchant
+      parameters:
+        - {$ref: '#/components/parameters/MerchantId'}
+        - {$ref: '#/components/parameters/Page'}
+        - {$ref: '#/components/parameters/Limit'}
+      responses:
+        '200': {description: Product collection}
+  /products:
+    get:
+      security: []
+      summary: Search and filter published products
+      parameters:
+        - {in: query, name: q, schema: {type: string, maxLength: 100}}
+        - {in: query, name: merchantId, schema: {type: string, format: uuid}}
+        - {in: query, name: categoryId, schema: {type: string, format: uuid}}
+        - {in: query, name: minPrice, schema: {type: number, minimum: 0}}
+        - {in: query, name: maxPrice, schema: {type: number, minimum: 0}}
+        - {in: query, name: available, schema: {type: boolean}}
+        - {$ref: '#/components/parameters/Page'}
+        - {$ref: '#/components/parameters/Limit'}
+      responses:
+        '200': {description: Published product collection}
+  /products/{productId}:
+    get:
+      security: []
+      summary: Get published product details
+      parameters:
+        - {in: path, name: productId, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200': {description: Product details}
+        '404': {description: Not found}
+  /orders:
+    get:
+      summary: List orders visible to current caller
+      responses:
+        '200': {description: Scoped order collection}
+    post:
+      summary: Create order; server calculates prices and totals
+      x-required-roles: [CUSTOMER]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [merchantId, deliveryAddressId, items]
+              properties:
+                merchantId: {type: string, format: uuid}
+                deliveryAddressId: {type: string, format: uuid}
+                items:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    required: [productId, quantity]
+                    properties:
+                      productId: {type: string, format: uuid}
+                      quantity: {type: integer, minimum: 1, maximum: 99}
+                customerNote: {type: string, maxLength: 500}
+      responses:
+        '201': {description: Order created}
+        '400': {description: Invalid request}
+        '409': {description: Business-rule conflict}
+  /orders/{orderId}:
+    get:
+      summary: Get order if caller is authorized
+      parameters:
+        - {in: path, name: orderId, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200': {description: Order details}
+        '404': {description: Not found or not visible}
+  /orders/{orderId}/payments:
+    post:
+      summary: Initiate payment for order
+      x-required-roles: [CUSTOMER]
+      parameters:
+        - {in: path, name: orderId, required: true, schema: {type: string, format: uuid}}
+        - {in: header, name: Idempotency-Key, required: true, schema: {type: string, maxLength: 100}}
+      responses:
+        '201': {description: Payment provider next action}
+        '409': {description: Payment/order state conflict}
+  /payments/webhooks/{provider}:
+    post:
+      security: []
+      summary: Receive signed payment provider event; verify signature and deduplicate
+      parameters:
+        - {in: path, name: provider, required: true, schema: {type: string}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {type: object, additionalProperties: true}
+      responses:
+        '200': {description: Event accepted idempotently}
+        '400': {description: Invalid event}
+        '401': {description: Invalid signature}
+  /rider/deliveries:
+    get:
+      summary: List deliveries assigned to current rider
+      x-required-roles: [RIDER]
+      responses:
+        '200': {description: Assigned delivery collection}
+  /deliveries/{deliveryId}:
+    get:
+      summary: Get delivery for authorized participant
+      parameters:
+        - {in: path, name: deliveryId, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200': {description: Delivery details}
+        '404': {description: Not found or not visible}
+  /admin/deliveries/{deliveryId}/assign:
+    post:
+      summary: Assign rider
+      x-required-roles: [ADMIN]
+      parameters:
+        - {in: path, name: deliveryId, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [riderId]
+              properties:
+                riderId: {type: string, format: uuid}
+      responses:
+        '200': {description: Rider assigned}
+        '409': {description: Assignment conflict}
+  /rider/deliveries/{deliveryId}/status:
+    patch:
+      summary: Update status for delivery assigned to current rider
+      x-required-roles: [RIDER]
+      parameters:
+        - {in: path, name: deliveryId, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: {type: string, enum: [ACCEPTED, PICKED_UP, IN_TRANSIT, DELIVERED, FAILED]}
+                note: {type: string, maxLength: 500}
+      responses:
+        '200': {description: Status updated}
+        '403': {description: Not assigned to caller}
+        '409': {description: Invalid transition}
+  /notifications:
+    get:
+      summary: List current user's notifications
+      responses:
+        '200': {description: Notification collection}
+  /notifications/{notificationId}/read:
+    patch:
+      summary: Mark own notification as read
+      parameters:
+        - {in: path, name: notificationId, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '204': {description: Marked read}
+  /admin/users/{userId}/status:
+    patch:
+      summary: Change user account status and audit action
+      x-required-roles: [ADMIN]
+      parameters:
+        - {in: path, name: userId, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: {type: string, enum: [ACTIVE, SUSPENDED, DEACTIVATED]}
+                reason: {type: string, maxLength: 500}
+      responses:
+        '200': {description: Status updated}
+        '403': {description: Insufficient permission}
+components:
+  responses:
+    ProductImageList:
+      description: Registered image metadata
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [data]
+            properties:
+              data:
+                type: array
+                items: {$ref: '#/components/schemas/ProductImage'}
+    ProductImageReadUrl:
+      description: Signed image retrieval URL that expires after 60 seconds
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [data]
+            properties:
+              data:
+                type: object
+                required: [url, expiresIn]
+                properties:
+                  url: {type: string, format: uri}
+                  expiresIn: {type: integer, example: 60}
+  schemas:
+    ProductImage:
+      type: object
+      required: [id, contentType, sizeBytes, readyAt]
+      properties:
+        id: {type: string, format: uuid}
+        contentType: {type: string, enum: [image/jpeg, image/png, image/webp]}
+        sizeBytes: {type: integer, minimum: 16, maximum: 5242880}
+        readyAt: {type: string, format: date-time}
+    MerchantInventoryResult:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [productId, quantityOnHand, quantityReserved, availableQuantity, lowStockLevel, updatedAt]
+          properties:
+            productId: {type: string, format: uuid}
+            quantityOnHand: {type: integer, minimum: 0}
+            quantityReserved: {type: integer, minimum: 0}
+            availableQuantity: {type: integer, minimum: 0}
+            lowStockLevel: {type: integer, minimum: 0}
+            updatedAt: {type: string, format: date-time, nullable: true}
+            movementId: {type: string, format: uuid, nullable: true, description: Returned on stock writes.}
+    MerchantProductInput:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name: {type: string, minLength: 1, maxLength: 120}
+        slug: {type: string, minLength: 1, maxLength: 100, pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'}
+        description: {type: string, maxLength: 2000, nullable: true}
+        sku: {type: string, minLength: 1, maxLength: 80, nullable: true}
+        unitPrice: {type: string, pattern: '^(?:0|[1-9][0-9]{0,9})(?:\.[0-9]{1,2})?$', example: '24.50'}
+        currency: {type: string, pattern: '^[A-Z]{3}$', default: GHS}
+        categoryIds:
+          type: array
+          maxItems: 30
+          uniqueItems: true
+          items: {type: string, format: uuid}
+    MerchantProfileInput:
+      type: object
+      additionalProperties: false
+      properties:
+        name: {type: string, minLength: 1, maxLength: 120}
+        slug: {type: string, minLength: 1, maxLength: 100, pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'}
+        description: {type: string, maxLength: 2000, nullable: true}
+        phone: {type: string, maxLength: 30, nullable: true}
+        email: {type: string, format: email, maxLength: 254, nullable: true}
+        addressLine: {type: string, maxLength: 250, nullable: true}
+        city: {type: string, maxLength: 100, nullable: true}
+        region: {type: string, maxLength: 100, nullable: true}
+        countryCode: {type: string, pattern: '^[A-Z]{2}$'}
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    Page:
+      in: query
+      name: page
+      schema: {type: integer, minimum: 1, default: 1}
+    Limit:
+      in: query
+      name: limit
+      schema: {type: integer, minimum: 1, maximum: 100, default: 20}
+    MerchantId:
+      in: path
+      name: merchantId
+      required: true
+      schema: {type: string, format: uuid}
+    ProductId:
+      in: path
+      name: productId
+      required: true
+      schema: {type: string, format: uuid}
+    ProductImageId:
+      in: path
+      name: imageId
+      required: true
+      schema: {type: string, format: uuid}
+    InventoryIdempotencyKey:
+      in: header
+      name: Idempotency-Key
+      required: true
+      description: Use a new key per product for each distinct stock write. Reuse the same key only to retry the original request.
+      schema: {type: string, pattern: '^[A-Za-z0-9._:-]{1,128}$'}
