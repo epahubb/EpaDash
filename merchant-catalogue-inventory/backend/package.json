@@ -1,0 +1,52 @@
+{
+  "name": "epadash-task3-database",
+  "version": "1.0.0",
+  "private": true,
+  "description": "EpaDash PostgreSQL and Prisma database implementation for Task 3",
+  "scripts": {
+    "db:up": "docker compose up -d db",
+    "db:down": "docker compose down",
+    "prisma:generate": "prisma generate",
+    "db:migration:generate": "node scripts/generate-migration.mjs",
+    "db:migrate": "prisma migrate deploy",
+    "db:seed": "prisma db seed",
+    "db:setup": "npm run db:up && npm run db:migration:generate && npm run db:migrate && npm run db:seed",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "db:validate": "prisma validate",
+    "db:status": "prisma migrate status",
+    "build": "tsc -p tsconfig.json",
+    "start": "node --env-file-if-exists=.env dist/src/server.js",
+    "dev": "node --env-file-if-exists=.env --watch --import tsx src/server.ts"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "6.19.0",
+    "argon2": "0.44.0",
+    "aws4fetch": "1.0.20",
+    "express": "5.2.1",
+    "express-rate-limit": "8.6.1",
+    "jsonwebtoken": "9.0.3",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@types/express": "5.0.6",
+    "@types/jsonwebtoken": "9.0.10",
+    "@types/node": "22.19.1",
+    "prisma": "6.19.0",
+    "tsx": "4.20.6",
+    "typescript": "5.9.3",
+    "vitest": "3.2.4"
+  },
+  "allowScripts": {
+    "@prisma/client@6.19.0": true,
+    "argon2@0.44.0": true,
+    "prisma@6.19.0": true,
+    "@prisma/engines@6.19.0": true,
+    "esbuild@0.25.12": true,
+    "esbuild@0.28.2": true
+  }
+}
